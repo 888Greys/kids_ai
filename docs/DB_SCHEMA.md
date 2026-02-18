@@ -1,9 +1,11 @@
 # Database Schema Notes
 
 Source file: `db/schema.sql`
+Seed file: `db/seeds/grade4_kicd_math_topics.sql`
+Prisma model map: `prisma/schema.prisma`
 
 ## Core Entities
-- `app_users`: Parent/admin application accounts mapped to Supabase auth users.
+- `app_users`: Parent/admin application accounts mapped to your app auth provider IDs.
 - `children`: Child learner profiles under each parent account.
 - `curriculum_topics`: KICD/CBC topic catalog for Grade 4 Math (expandable later).
 - `learning_sessions`: One learning run with model/version and high-level outcomes.
@@ -39,3 +41,5 @@ Source file: `db/schema.sql`
 3. Add generated columns/materialized view for faster dashboard reads if needed.
 4. Add audit table for AI prompt/response moderation events.
 
+## Prisma Note
+- SQL views (`v_child_daily_progress`, `v_child_topic_mastery_latest`) are queried through raw SQL or a read-service layer in MVP, not Prisma models.

@@ -1,0 +1,235 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  PARENT @map("parent")
+  ADMIN  @map("admin")
+
+  @@map("user_role")
+}
+
+enum SessionMode {
+  PRACTICE  @map("practice")
+  CHALLENGE @map("challenge")
+  REVISION  @map("revision")
+
+  @@map("session_mode")
+}
+
+enum DifficultyLevel {
+  EASY     @map("easy")
+  MEDIUM   @map("medium")
+  HARD     @map("hard")
+  ADAPTIVE @map("adaptive")
+
+  @@map("difficulty_level")
+}
+
+enum QuestionSource {
+  AI_GENERATED @map("ai_generated")
+  CURATED      @map("curated")
+
+  @@map("question_source")
+}
+
+enum ProficiencyBand {
+  NEEDS_SUPPORT @map("needs_support")
+  DEVELOPING    @map("developing")
+  PROFICIENT    @map("proficient")
+  ADVANCED      @map("advanced")
+
+  @@map("proficiency_band")
+}
+
+model AppUser {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  authProvider       String   @default("local") @map("auth_provider")
+  authProviderUserId String   @unique @map("auth_provider_user_id")
+  role               UserRole @default(PARENT)
+  fullName           String   @map("full_name")
+  email              String   @unique
+  timezone           String   @default("Africa/Nairobi")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  children Child[]
+
+  @@map("app_users")
+}
+
+model Child {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  parentUserId String    @map("parent_user_id") @db.Uuid
+  firstName    String    @map("first_name")
+  lastName     String?   @map("last_name")
+  gradeLevel   Int       @default(4) @map("grade_level")
+  dateOfBirth  DateTime? @map("date_of_birth") @db.Date
+  avatarName   String?   @map("avatar_name")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  parentUser          AppUser               @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  learningSessions    LearningSession[]
+  generatedQuestions  GeneratedQuestion[]
+  questionAttempts    QuestionAttempt[]
+  masterySnapshots    MasterySnapshot[]
+  childBadges         ChildBadge[]
+  parentRecommendations ParentRecommendation[]
+
+  @@index([parentUserId], map: "idx_children_parent")
+  @@map("children")
+}
+
+model CurriculumTopic {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  gradeLevel      Int      @map("grade_level")
+  strand          String
+  subStrand       String   @map("sub_strand")
+  topicCode       String   @unique @map("topic_code")
+  topicTitle      String   @map("topic_title")
+  learningOutcome String   @map("learning_outcome")
+  sourceName      String   @default("KICD CBC") @map("source_name")
+  sourceUrl       String?  @map("source_url")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  focusedSessions       LearningSession[]
+  generatedQuestions    GeneratedQuestion[]
+  masterySnapshots      MasterySnapshot[]
+  parentRecommendations ParentRecommendation[]
+
+  @@index([gradeLevel, isActive], map: "idx_topics_grade_active")
+  @@map("curriculum_topics")
+}
+
+model LearningSession {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  childId        String      @map("child_id") @db.Uuid
+  focusTopicId   String?     @map("focus_topic_id") @db.Uuid
+  mode           SessionMode @default(PRACTICE)
+  aiModel        String      @map("ai_model")
+  promptVersion  String      @map("prompt_version")
+  startedAt      DateTime    @default(now()) @map("started_at") @db.Timestamptz(6)
+  endedAt        DateTime?   @map("ended_at") @db.Timestamptz(6)
+  totalQuestions Int         @default(0) @map("total_questions")
+  correctAnswers Int         @default(0) @map("correct_answers")
+  avgHintsUsed   Decimal     @default(0) @map("avg_hints_used") @db.Decimal(5, 2)
+  engagementScore Decimal?   @map("engagement_score") @db.Decimal(5, 2)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  child              Child            @relation(fields: [childId], references: [id], onDelete: Cascade)
+  focusTopic         CurriculumTopic? @relation(fields: [focusTopicId], references: [id])
+  generatedQuestions GeneratedQuestion[]
+
+  @@index([childId, startedAt], map: "idx_sessions_child_started")
+  @@map("learning_sessions")
+}
+
+model GeneratedQuestion {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId    String          @map("session_id") @db.Uuid
+  childId      String          @map("child_id") @db.Uuid
+  topicId      String          @map("topic_id") @db.Uuid
+  source       QuestionSource  @default(AI_GENERATED)
+  difficulty   DifficultyLevel @default(ADAPTIVE)
+  questionText String          @map("question_text")
+  answerFormat String          @default("number") @map("answer_format")
+  correctAnswer Json           @map("correct_answer") @db.JsonB
+  options      Json?           @db.JsonB
+  hintLadder   Json            @map("hint_ladder") @db.JsonB
+  explanation  String
+  promptInput  Json?           @map("prompt_input") @db.JsonB
+  modelOutput  Json?           @map("model_output") @db.JsonB
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  learningSession  LearningSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  child            Child            @relation(fields: [childId], references: [id], onDelete: Cascade)
+  topic            CurriculumTopic  @relation(fields: [topicId], references: [id])
+  questionAttempts QuestionAttempt[]
+
+  @@index([childId, topicId, createdAt], map: "idx_questions_child_topic_created")
+  @@map("generated_questions")
+}
+
+model QuestionAttempt {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionId          String   @map("question_id") @db.Uuid
+  childId             String   @map("child_id") @db.Uuid
+  submittedAnswer     Json     @map("submitted_answer") @db.JsonB
+  isCorrect           Boolean  @map("is_correct")
+  hintsUsed           Int      @default(0) @map("hints_used")
+  responseTimeSeconds Int?     @map("response_time_seconds")
+  feedbackText        String?  @map("feedback_text")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  question GeneratedQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  child    Child             @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, createdAt], map: "idx_attempts_child_created")
+  @@map("question_attempts")
+}
+
+model MasterySnapshot {
+  id                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  childId               String          @map("child_id") @db.Uuid
+  topicId               String          @map("topic_id") @db.Uuid
+  snapshotDate          DateTime        @default(dbgenerated("CURRENT_DATE")) @map("snapshot_date") @db.Date
+  attemptsCount         Int             @default(0) @map("attempts_count")
+  accuracyPercent       Decimal         @default(0) @map("accuracy_percent") @db.Decimal(5, 2)
+  hintDependencyPercent Decimal         @default(0) @map("hint_dependency_percent") @db.Decimal(5, 2)
+  masteryScore          Decimal         @default(0) @map("mastery_score") @db.Decimal(5, 2)
+  proficiency           ProficiencyBand @default(DEVELOPING)
+  createdAt             DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  child Child          @relation(fields: [childId], references: [id], onDelete: Cascade)
+  topic CurriculumTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, topicId, snapshotDate])
+  @@index([childId, snapshotDate], map: "idx_snapshots_child_date")
+  @@map("mastery_snapshots")
+}
+
+model Badge {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  badgeCode   String   @unique @map("badge_code")
+  title       String
+  description String
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  childBadges ChildBadge[]
+
+  @@map("badges")
+}
+
+model ChildBadge {
+  id      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  childId String   @map("child_id") @db.Uuid
+  badgeId String   @map("badge_id") @db.Uuid
+  earnedAt DateTime @default(now()) @map("earned_at") @db.Timestamptz(6)
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, badgeId])
+  @@map("child_badges")
+}
+
+model ParentRecommendation {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  childId       String    @map("child_id") @db.Uuid
+  focusTopicId  String?   @map("focus_topic_id") @db.Uuid
+  generatedOn   DateTime  @default(dbgenerated("CURRENT_DATE")) @map("generated_on") @db.Date
+  recommendation String
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  child      Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
+  focusTopic CurriculumTopic? @relation(fields: [focusTopicId], references: [id])
+
+  @@map("parent_recommendations")
+}

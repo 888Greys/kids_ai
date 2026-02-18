@@ -1,4 +1,4 @@
--- Kids AI MVP database schema (PostgreSQL / Supabase)
+-- Kids AI MVP database schema (self-hosted PostgreSQL in Docker)
 -- Focus: Grade 4 Math pilot + parent dashboard insights
 
 create extension if not exists "pgcrypto";
@@ -21,7 +21,8 @@ $$;
 
 create table app_users (
   id uuid primary key default gen_random_uuid(),
-  auth_user_id uuid not null unique,
+  auth_provider text not null default 'local',
+  auth_provider_user_id text not null unique,
   role user_role not null default 'parent',
   full_name text not null,
   email text not null unique,
@@ -179,4 +180,3 @@ select distinct on (ms.child_id, ms.topic_id)
   ms.proficiency
 from mastery_snapshots ms
 order by ms.child_id, ms.topic_id, ms.snapshot_date desc;
-
