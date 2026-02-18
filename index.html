@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BrightPath Kids AI Prototype</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Nunito:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-shape bg-shape-a" aria-hidden="true"></div>
+    <div class="bg-shape bg-shape-b" aria-hidden="true"></div>
+    <div class="bg-shape bg-shape-c" aria-hidden="true"></div>
+
+    <main class="app">
+      <header class="hero reveal">
+        <div class="hero-copy">
+          <p class="eyebrow">AI Learning Playground</p>
+          <h1>Your AI buddy makes learning feel like a game.</h1>
+          <p class="hero-text">
+            Kids can pick a quest, ask questions, and unlock rewards while they
+            learn.
+          </p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" id="startLearning">
+              Start Today&apos;s Quest
+            </button>
+            <button class="btn btn-ghost">Parent View</button>
+          </div>
+        </div>
+
+        <div class="hero-mascot" aria-hidden="true">
+          <div class="orb"></div>
+          <div class="robot">
+            <div class="robot-ant"></div>
+            <div class="robot-face">
+              <span class="eye"></span>
+              <span class="eye"></span>
+              <span class="mouth"></span>
+            </div>
+            <div class="robot-body"></div>
+          </div>
+        </div>
+      </header>
+
+      <section class="missions reveal" id="missions">
+        <h2>Choose a mission</h2>
+        <div class="mission-grid">
+          <button
+            class="mission-card active"
+            data-mission="Math Quest"
+            data-level="Level 2"
+            data-color="#ff8c42"
+          >
+            <span class="mission-icon">M</span>
+            <strong>Math Quest</strong>
+            <small>Number puzzles and quick wins</small>
+          </button>
+
+          <button
+            class="mission-card"
+            data-mission="Word Wizard"
+            data-level="Level 1"
+            data-color="#2ec4b6"
+          >
+            <span class="mission-icon">W</span>
+            <strong>Word Wizard</strong>
+            <small>Stories, spelling, and vocab</small>
+          </button>
+
+          <button
+            class="mission-card"
+            data-mission="Science Lab"
+            data-level="Level 3"
+            data-color="#f15bb5"
+          >
+            <span class="mission-icon">S</span>
+            <strong>Science Lab</strong>
+            <small>Experiments and curious facts</small>
+          </button>
+        </div>
+      </section>
+
+      <section class="workspace reveal">
+        <section class="panel chat-panel">
+          <div class="panel-head">
+            <h2 id="missionTitle">Math Quest</h2>
+            <span class="tag" id="missionTag">Level 2</span>
+          </div>
+
+          <div class="chat-log" id="chatLog" aria-live="polite">
+            <article class="bubble ai">
+              I am Milo, your AI helper. Want to solve one puzzle together?
+            </article>
+            <article class="bubble kid">
+              Yes. Make it fun.
+            </article>
+          </div>
+
+          <form class="chat-form" id="chatForm">
+            <label class="sr-only" for="chatInput">Ask Milo</label>
+            <input
+              id="chatInput"
+              type="text"
+              placeholder="Ask Milo anything..."
+              autocomplete="off"
+            />
+            <button class="btn mic-btn" id="voiceBtn" type="button">Mic</button>
+            <button class="btn send-btn" type="submit">Send</button>
+          </form>
+        </section>
+
+        <aside class="panel progress-panel" id="progressPanel">
+          <h2>Adventure Board</h2>
+
+          <div class="streak-card">
+            <p>Current streak</p>
+            <div class="streak-value"><span id="streakCount">3</span> days</div>
+            <button class="btn btn-primary" id="completeChallenge">
+              Complete challenge
+            </button>
+          </div>
+
+          <div class="meter-wrap">
+            <div class="meter-head">
+              <span>Quest progress</span>
+              <strong id="progressValue">45%</strong>
+            </div>
+            <div class="meter">
+              <div class="meter-fill" id="meterFill"></div>
+            </div>
+          </div>
+
+          <div class="badge-grid">
+            <button class="badge unlocked" data-badge="explorer">
+              Star Explorer
+            </button>
+            <button class="badge locked" data-badge="focus">
+              Focus Hero
+            </button>
+            <button class="badge locked" data-badge="genius">
+              Tiny Genius
+            </button>
+          </div>
+
+          <div class="mini-quiz">
+            <h3>Mini quiz</h3>
+            <p>What is 8 + 4?</p>
+            <div class="quiz-options" id="quizOptions">
+              <button type="button" data-correct="false">10</button>
+              <button type="button" data-correct="true">12</button>
+              <button type="button" data-correct="false">13</button>
+            </div>
+            <p class="quiz-feedback" id="quizFeedback">Pick one answer.</p>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
