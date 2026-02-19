@@ -22,9 +22,10 @@ Build an AI-first Grade 4 Math learning product that is:
 ## 4. Architecture
 - Frontend: Next.js + TypeScript + Tailwind + Framer Motion.
 - Backend/API: Next.js route handlers + server actions.
+- App codebase: `apps/web`.
 - Database: Self-hosted PostgreSQL in Docker (schema in `db/schema.sql`).
 - Infra bootstrap: Docker compose config in `infra/postgres/docker-compose.yml`.
-- ORM mapping: Prisma schema in `prisma/schema.prisma`.
+- ORM mapping: Prisma schema in `apps/web/prisma/schema.prisma`.
 - API contracts: `docs/API_CONTRACTS.md`.
 - Auth: App-managed auth (Auth.js or custom JWT session strategy) mapped into `app_users`.
 - AI: OpenAI JSON-mode outputs with validation and retry.

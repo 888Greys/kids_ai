@@ -2,7 +2,7 @@
 
 These files prepare a self-hosted PostgreSQL instance for this project:
 - `infra/postgres/docker-compose.yml`
-- `.env.example`
+- `apps/web/.env.example`
 
 ## What is preconfigured
 - PostgreSQL 16 container.

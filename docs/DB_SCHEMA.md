@@ -2,7 +2,7 @@
 
 Source file: `db/schema.sql`
 Seed file: `db/seeds/grade4_kicd_math_topics.sql`
-Prisma model map: `prisma/schema.prisma`
+Prisma model map: `apps/web/prisma/schema.prisma`
 
 ## Core Entities
 - `app_users`: Parent/admin application accounts mapped to your app auth provider IDs.
