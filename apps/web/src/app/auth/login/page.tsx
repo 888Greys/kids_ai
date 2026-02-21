@@ -43,6 +43,26 @@ function LoginForm() {
         }
     }
 
+    function handleDemoLogin() {
+        setEmail("demo@brightpath.com");
+        setPassword("demo123");
+        setError(null);
+        setIsLoading(true);
+        fetch("/api/v1/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: "demo@brightpath.com", password: "demo123" }),
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error("Login failed");
+                router.push(redirect);
+            })
+            .catch(() => {
+                setError("Demo login failed.");
+                setIsLoading(false);
+            });
+    }
+
     return (
         <main className="auth-page relative overflow-hidden">
             <FloatingDecor />
@@ -93,6 +113,21 @@ function LoginForm() {
                         disabled={isLoading}
                     >
                         {isLoading ? "Logging in..." : "🔑 Log In"}
+                    </button>
+
+                    <div style={{ position: "relative", margin: "1rem 0", textAlign: "center" }}>
+                        <hr style={{ borderColor: "rgba(0,0,0,0.1)" }} />
+                        <span style={{ position: "absolute", top: "-10px", left: "50%", transform: "translateX(-50%)", background: "white", padding: "0 10px", fontSize: "14px", color: "var(--purple)", borderRadius: "10px" }}>or</span>
+                    </div>
+
+                    <button
+                        type="button"
+                        className="btn btn-quest btn-xl auth-submit"
+                        onClick={handleDemoLogin}
+                        disabled={isLoading}
+                        style={{ width: "100%", background: "var(--yellow)", color: "var(--navy)", boxShadow: "0 4px 0 #ca8a04" }}
+                    >
+                        🚀 One-Click Demo Login
                     </button>
                 </form>
 
