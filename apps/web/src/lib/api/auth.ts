@@ -1,6 +1,12 @@
 import { ApiError } from "@/lib/api/errors";
+import { jwtVerify, type JWTPayload } from "jose";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET ?? "brightpath-dev-secret-change-me";
+  return new TextEncoder().encode(secret);
+}
 
 function extractBearerToken(request: Request): string | null {
   const authHeader = request.headers.get("authorization");
@@ -64,7 +70,30 @@ function extractParentIdFromDevToken(token: string): string | null {
   return UUID_RE.test(parentId) ? parentId : null;
 }
 
-export function getParentUserId(request: Request): string {
+function extractSessionCookieToken(request: Request): string | null {
+  const cookieHeader = request.headers.get("cookie");
+  if (!cookieHeader) return null;
+
+  const match = cookieHeader.match(/(?:^|;\s*)session_token=([^;]+)/);
+  return match?.[1]?.trim() ?? null;
+}
+
+async function extractParentIdFromSessionCookie(request: Request): Promise<string | null> {
+  const token = extractSessionCookieToken(request);
+  if (!token) return null;
+
+  try {
+    const { payload } = await jwtVerify(token, getJwtSecret());
+    const data = payload as JWTPayload & { userId?: string };
+    if (!data.userId || typeof data.userId !== "string") return null;
+    return UUID_RE.test(data.userId) ? data.userId : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getParentUserId(request: Request): Promise<string> {
+  // 1. Try Authorization header (existing flow)
   const token = extractBearerToken(request);
   if (token) {
     const fromJwt = extractParentIdFromJwt(token);
@@ -82,6 +111,13 @@ export function getParentUserId(request: Request): string {
     throw new ApiError("UNAUTHORIZED", 401, "Invalid bearer token");
   }
 
+  // 2. Try session cookie (new cookie-based auth flow)
+  const fromCookie = await extractParentIdFromSessionCookie(request);
+  if (fromCookie) {
+    return fromCookie;
+  }
+
+  // 3. Dev fallback via x-parent-user-id header
   const fallbackParentId = request.headers.get("x-parent-user-id")?.trim();
   if (process.env.NODE_ENV !== "production" && fallbackParentId && UUID_RE.test(fallbackParentId)) {
     return fallbackParentId;
@@ -89,3 +125,4 @@ export function getParentUserId(request: Request): string {
 
   throw new ApiError("UNAUTHORIZED", 401, "Missing authentication context");
 }
+

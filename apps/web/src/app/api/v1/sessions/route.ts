@@ -7,7 +7,7 @@ import { startSession, validateStartSessionRequest } from "@/lib/api/sessions/st
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const parentUserId = getParentUserId(request);
+    const parentUserId = await getParentUserId(request);
     const json = (await request.json()) as unknown;
     const payload = validateStartSessionRequest(json);
 

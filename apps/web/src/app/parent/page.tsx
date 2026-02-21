@@ -1,188 +1,330 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import type { DashboardResponse, TopicDrilldownResponse } from "../lib/types";
 import {
     MATH_MISSIONS,
-    PROTOTYPE_CHILD,
     proficiencyLabel,
     proficiencyClass,
     formatSignedValue,
     matchTopicForMission,
 } from "../lib/constants";
-import {
-    buildPrototypeDashboard,
-    buildPrototypeDrilldown,
-} from "../lib/prototype-data";
+
+const AVATAR_EMOJIS: Record<string, string> = {
+    milo: "🦊",
+    luna: "🐱",
+    rocky: "🐻",
+    pip: "🐧",
+    sky: "🦋",
+    blaze: "🐉",
+    coco: "🐵",
+    star: "⭐",
+};
+
+type ChildProfile = {
+    childId: string;
+    firstName: string;
+    gradeLevel: number;
+    avatarName?: string | null;
+};
 
 export default function ParentDashboard() {
-    const [dashboard] = useState<DashboardResponse>(
-        buildPrototypeDashboard(PROTOTYPE_CHILD.childId, PROTOTYPE_CHILD.firstName, PROTOTYPE_CHILD.gradeLevel)
-    );
+    const router = useRouter();
+
+    const [children, setChildren] = useState<ChildProfile[]>([]);
+    const [selectedChild, setSelectedChild] = useState<ChildProfile | null>(null);
+    const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
     const [drilldown, setDrilldown] = useState<TopicDrilldownResponse | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const weakestTopic = useMemo(() => {
-        if (!dashboard?.topicMastery.length) return null;
-        return [...dashboard.topicMastery].sort((a, b) => a.masteryScore - b.masteryScore)[0] ?? null;
-    }, [dashboard]);
-
-    const weeklyInsight = useMemo(() => {
-        if (!dashboard || dashboard.dailyTrend.length === 0) return null;
-        const trend = [...dashboard.dailyTrend].sort((a, b) => a.date.localeCompare(b.date));
-        const first = trend[0];
-        const last = trend[trend.length - 1];
-        return {
-            attemptsTotal: trend.reduce((s, r) => s + r.attempts, 0),
-            activeDays: trend.filter((r) => r.attempts > 0).length,
-            accuracyDelta: Math.round((last.accuracyPercent - first.accuracyPercent) * 10) / 10,
-            hintDelta: Math.round((last.avgHintsUsed - first.avgHintsUsed) * 100) / 100,
-        };
-    }, [dashboard]);
-
-    const focusedRecommendation = useMemo(() => {
-        if (!dashboard) return null;
-        if (weakestTopic) {
-            const targeted = dashboard.recommendations.find((r) => r.focusTopicCode === weakestTopic.topicCode);
-            if (targeted) return targeted;
+    // Fetch children on mount
+    useEffect(() => {
+        async function fetchChildren() {
+            try {
+                const res = await fetch("/api/v1/parent/children");
+                if (res.ok) {
+                    const data = await res.json();
+                    const kids = data.children ?? [];
+                    setChildren(kids);
+                    if (kids.length > 0) {
+                        setSelectedChild(kids[0]);
+                    }
+                }
+            } catch {
+                // Silently fail
+            } finally {
+                setIsLoading(false);
+            }
         }
-        return dashboard.recommendations[0] ?? null;
-    }, [dashboard, weakestTopic]);
+        fetchChildren();
+    }, []);
 
-    function handleLoadTopic(topicCode: string): void {
-        const result = buildPrototypeDrilldown(topicCode);
-        setDrilldown(result);
+    // Fetch dashboard when child changes
+    useEffect(() => {
+        if (!selectedChild) return;
+        async function fetchDashboard() {
+            try {
+                const res = await fetch(`/api/v1/parent/children/${selectedChild!.childId}/dashboard`);
+                if (res.ok) {
+                    setDashboard(await res.json());
+                }
+            } catch {
+                // Silently fail — dashboard will show empty state
+            }
+        }
+        fetchDashboard();
+    }, [selectedChild]);
+
+    async function handleLoadTopic(topicCode: string) {
+        if (!selectedChild) return;
+        try {
+            const res = await fetch(`/api/v1/parent/children/${selectedChild.childId}/topics/${topicCode}`);
+            if (res.ok) {
+                setDrilldown(await res.json());
+            }
+        } catch {
+            // Silently fail
+        }
+    }
+
+    async function handleLogout() {
+        await fetch("/api/v1/auth/logout", { method: "POST" });
+        router.push("/");
+    }
+
+    function handlePlayAs(childId: string) {
+        document.cookie = `active_child_id=${childId}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`;
+        router.push("/play");
+    }
+
+    const topicsByMission = useMemo(() => {
+        if (!dashboard) return {};
+        return MATH_MISSIONS.reduce<Record<string, DashboardResponse["topicMastery"][number] | null>>((acc, m) => {
+            acc[m.key] = matchTopicForMission(dashboard.topicMastery, m);
+            return acc;
+        }, {});
+    }, [dashboard]);
+
+    if (isLoading) {
+        return (
+            <main className="app-shell">
+                <div className="empty-card">
+                    <span className="result-wait-spinner" aria-hidden="true" />
+                    <p>Loading your dashboard...</p>
+                </div>
+            </main>
+        );
     }
 
     return (
-        <main className="app-shell parent-shell">
-            <header className="parent-header">
-                <a href="/" className="parent-back">← Back to Kids App</a>
-                <h1>📊 Parent Dashboard</h1>
-                <p className="parent-subtitle">
-                    Tracking <strong>{dashboard.child.name}</strong>&apos;s Grade {dashboard.child.gradeLevel} Math progress
-                </p>
+        <main className="app-shell">
+            {/* ── Top Bar ── */}
+            <header className="app-header">
+                <div className="header-brand">
+                    <Image src="/milo.png" alt="Milo" width={40} height={40} />
+                    <span className="header-title">BrightPath</span>
+                </div>
+                <div className="parent-top-actions">
+                    <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => router.push("/onboarding/child")}
+                    >
+                        ➕ Add Child
+                    </button>
+                    <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={handleLogout}
+                    >
+                        🚪 Log Out
+                    </button>
+                </div>
             </header>
 
-            {/* Overview cards */}
-            <div className="parent-overview">
-                <div className="overview-card">
-                    <span className="overview-num">{dashboard.overview.attempts}</span>
-                    <span className="overview-label">Total Attempts</span>
-                </div>
-                <div className="overview-card">
-                    <span className="overview-num">{dashboard.overview.accuracyPercent}%</span>
-                    <span className="overview-label">Accuracy</span>
-                </div>
-                <div className="overview-card">
-                    <span className="overview-num">{dashboard.overview.avgHintsUsed}</span>
-                    <span className="overview-label">Avg Hints</span>
-                </div>
-                <div className="overview-card">
-                    <span className="overview-num">{dashboard.overview.streakDays}</span>
-                    <span className="overview-label">Day Streak</span>
-                </div>
-            </div>
+            <h1 className="section-label" style={{ fontSize: 24 }}>
+                👨‍👩‍👧‍👦 Parent Dashboard
+            </h1>
 
-            {/* Insights */}
-            <section className="parent-insights">
-                <h2>Weekly Insights</h2>
-                <div className="insight-grid">
-                    <div className="insight-card insight-win">
-                        <p className="insight-kicker">✅ Win</p>
-                        <p>{weeklyInsight && weeklyInsight.accuracyDelta >= 0
-                            ? `Accuracy improved by ${formatSignedValue(weeklyInsight.accuracyDelta, "%")} this week.`
-                            : `${dashboard.overview.attempts} attempts logged — building consistency.`}</p>
-                    </div>
-                    <div className="insight-card insight-risk">
-                        <p className="insight-kicker">⚠️ Focus Area</p>
-                        <p>{weakestTopic
-                            ? `${weakestTopic.topicTitle} needs attention (mastery ${weakestTopic.masteryScore}, hints ${weakestTopic.hintDependencyPercent}%).`
-                            : "No risk areas identified yet."}</p>
-                    </div>
-                    {focusedRecommendation && (
-                        <div className="insight-card insight-rec">
-                            <p className="insight-kicker">💡 Recommendation</p>
-                            <p>{focusedRecommendation.text}</p>
-                        </div>
-                    )}
+            {/* ── Children Cards ── */}
+            {children.length === 0 ? (
+                <div className="empty-card">
+                    <span className="success-emoji">🌟</span>
+                    <p>No children yet. Add your first child to get started!</p>
+                    <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => router.push("/onboarding/child")}
+                    >
+                        ➕ Add Child
+                    </button>
                 </div>
-            </section>
-
-            {/* Topic mastery */}
-            <section className="parent-mastery">
-                <h2>Topic Mastery</h2>
-                <div className="mastery-table">
-                    {dashboard.topicMastery.map((topic) => {
-                        const mission = MATH_MISSIONS.find((m) => matchTopicForMission([topic], m));
+            ) : (
+                <div className="child-cards-grid">
+                    {children.map((child) => {
+                        const emoji = AVATAR_EMOJIS[child.avatarName ?? ""] ?? "👤";
+                        const isSelected = selectedChild?.childId === child.childId;
                         return (
-                            <motion.button
-                                key={topic.topicCode}
-                                type="button"
-                                className="mastery-table-row"
-                                onClick={() => handleLoadTopic(topic.topicCode)}
-                                whileHover={{ scale: 1.01 }}
+                            <motion.div
+                                key={child.childId}
+                                className="child-card"
+                                style={isSelected ? { borderLeft: `4px solid var(--purple)` } : {}}
+                                whileHover={{ scale: 1.02 }}
                             >
-                                <span className="mastery-table-emoji">{mission?.emoji ?? "📘"}</span>
-                                <div className="mastery-table-info">
-                                    <span className="mastery-table-title">{topic.topicTitle}</span>
-                                    <span className="mastery-table-code">{topic.topicCode}</span>
-                                </div>
-                                <div className="mastery-table-bar">
-                                    <div className="mastery-bar-track">
-                                        <div className="mastery-bar-fill" style={{ width: `${topic.masteryScore}%` }} />
+                                <div className="child-card-header">
+                                    <span className="child-card-avatar">{emoji}</span>
+                                    <div className="child-card-info">
+                                        <h3>{child.firstName}</h3>
+                                        <p>Grade {child.gradeLevel}</p>
                                     </div>
                                 </div>
-                                <span className="mastery-table-score">{topic.masteryScore}</span>
-                                <span className={proficiencyClass(topic.proficiency)}>
-                                    {proficiencyLabel(topic.proficiency)}
-                                </span>
-                            </motion.button>
+                                <div className="child-card-actions">
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary btn-sm"
+                                        onClick={() => setSelectedChild(child)}
+                                    >
+                                        📊 View Stats
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-quest btn-sm"
+                                        style={{ padding: "10px 16px", fontSize: 13 }}
+                                        onClick={() => handlePlayAs(child.childId)}
+                                    >
+                                        🎮 Play
+                                    </button>
+                                </div>
+                            </motion.div>
                         );
                     })}
                 </div>
-            </section>
-
-            {/* Drilldown */}
-            {drilldown && (
-                <section className="parent-drilldown">
-                    <h2>🔎 {drilldown.topicTitle}</h2>
-                    <p className="drilldown-meta">
-                        {drilldown.topicCode} • Mastery {drilldown.latestMastery.masteryScore} ({proficiencyLabel(drilldown.latestMastery.proficiency)})
-                    </p>
-                    <div className="drilldown-history">
-                        {drilldown.attemptHistory.map((row) => (
-                            <div key={row.date} className="drilldown-row">
-                                <span>{row.date}</span>
-                                <span>{row.attempts} attempts</span>
-                                <span>{row.correctAttempts} correct</span>
-                                <span>{row.avgHintsUsed} hints avg</span>
-                            </div>
-                        ))}
-                    </div>
-                </section>
             )}
 
-            {/* Daily trend */}
-            <section className="parent-trend">
-                <h2>Daily Trend (7 days)</h2>
-                <div className="trend-table">
-                    <div className="trend-header">
-                        <span>Date</span>
-                        <span>Attempts</span>
-                        <span>Accuracy</span>
-                        <span>Hints</span>
-                    </div>
-                    {dashboard.dailyTrend.map((row) => (
-                        <div key={row.date} className="trend-row">
-                            <span>{row.date}</span>
-                            <span>{row.attempts}</span>
-                            <span>{row.accuracyPercent}%</span>
-                            <span>{row.avgHintsUsed}</span>
+            {/* ── Selected Child Dashboard ── */}
+            {selectedChild && dashboard && (
+                <>
+                    <h2 className="section-label">
+                        📈 {selectedChild.firstName}&apos;s Progress
+                    </h2>
+
+                    {/* Overview stats */}
+                    <div className="stats-row">
+                        <div className="stats-card stats-card-purple">
+                            <span className="stats-num">{dashboard.overview.attempts}</span>
+                            <span className="stats-label">Questions Done</span>
                         </div>
-                    ))}
-                </div>
-            </section>
+                        <div className="stats-card stats-card-green">
+                            <span className="stats-num">{dashboard.overview.accuracyPercent}%</span>
+                            <span className="stats-label">Accuracy</span>
+                        </div>
+                        <div className="stats-card stats-card-orange">
+                            <span className="stats-num">{dashboard.overview.streakDays}</span>
+                            <span className="stats-label">Day Streak</span>
+                        </div>
+                    </div>
+
+                    {/* Topic Mastery */}
+                    <h3 className="section-label">📊 Topic Mastery</h3>
+                    <div className="mastery-list">
+                        {MATH_MISSIONS.map((mission) => {
+                            const topic = topicsByMission[mission.key];
+                            if (!topic) return null;
+                            return (
+                                <motion.div
+                                    key={mission.key}
+                                    className="mastery-card"
+                                    whileHover={{ scale: 1.01 }}
+                                >
+                                    <div className="mastery-card-top">
+                                        <span>{mission.emoji} {mission.title}</span>
+                                        <span className={proficiencyClass(topic.proficiency)}>
+                                            {proficiencyLabel(topic.proficiency)}
+                                        </span>
+                                    </div>
+                                    <div className="mission-mastery-bar">
+                                        <div
+                                            className="mission-mastery-fill"
+                                            style={{ width: `${topic.masteryScore}%`, background: mission.color }}
+                                        />
+                                    </div>
+                                    <div className="mastery-card-bottom">
+                                        <span>{topic.masteryScore}% mastery</span>
+                                        <span>{topic.accuracyPercent}% accuracy</span>
+                                        <button
+                                            type="button"
+                                            className="btn btn-ghost btn-sm"
+                                            onClick={() => handleLoadTopic(topic.topicCode)}
+                                        >
+                                            Details
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Topic Drilldown */}
+                    {drilldown && (
+                        <div className="drilldown-panel">
+                            <div className="drilldown-header">
+                                <h3>🔍 {drilldown.topicTitle}</h3>
+                                <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm"
+                                    onClick={() => setDrilldown(null)}
+                                >
+                                    ✕ Close
+                                </button>
+                            </div>
+                            <div className="mastery-card-bottom" style={{ marginBottom: 12 }}>
+                                <span>{drilldown.latestMastery.masteryScore}% mastery</span>
+                                <span className={proficiencyClass(drilldown.latestMastery.proficiency)}>
+                                    {proficiencyLabel(drilldown.latestMastery.proficiency)}
+                                </span>
+                            </div>
+                            <table className="drilldown-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Attempts</th>
+                                        <th>Correct</th>
+                                        <th>Avg Hints</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {drilldown.attemptHistory.map((row) => (
+                                        <tr key={row.date}>
+                                            <td>{row.date}</td>
+                                            <td>{row.attempts}</td>
+                                            <td>{row.correctAttempts}</td>
+                                            <td>{row.avgHintsUsed}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {/* Recommendations */}
+                    {dashboard.recommendations.length > 0 && (
+                        <>
+                            <h3 className="section-label">💡 Recommendations</h3>
+                            <div className="recommendations-list">
+                                {dashboard.recommendations.map((rec, i) => (
+                                    <div key={i} className="recommendation-card">
+                                        <span className="rec-date">{rec.generatedOn}</span>
+                                        <p>{rec.text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </>
+            )}
         </main>
     );
 }

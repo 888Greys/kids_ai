@@ -11,7 +11,7 @@ type RouteContext = {
 
 export async function GET(request: Request, context: RouteContext): Promise<NextResponse> {
   try {
-    const parentUserId = getParentUserId(request);
+    const parentUserId = await getParentUserId(request);
     const { childId, topicCode } = await context.params;
     const url = new URL(request.url);
     const days = parseTopicDrilldownDays(url.searchParams.get("days"));

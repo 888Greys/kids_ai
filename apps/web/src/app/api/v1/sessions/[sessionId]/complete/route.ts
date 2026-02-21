@@ -12,7 +12,7 @@ type RouteContext = {
 export async function POST(request: Request, context: RouteContext): Promise<NextResponse> {
   try {
     const { sessionId } = await context.params;
-    const parentUserId = getParentUserId(request);
+    const parentUserId = await getParentUserId(request);
     const json = (await request.json()) as unknown;
     const payload = validateCompleteSessionPayload(json);
 

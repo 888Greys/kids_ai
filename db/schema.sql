@@ -24,6 +24,7 @@ create table app_users (
   auth_provider text not null default 'local',
   auth_provider_user_id text not null unique,
   role user_role not null default 'parent',
+  password_hash text,
   full_name text not null,
   email text not null unique,
   timezone text not null default 'Africa/Nairobi',

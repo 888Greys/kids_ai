@@ -16,7 +16,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       throw new ApiError("NOT_FOUND", 404, "Endpoint not found");
     }
 
-    const parentUserId = getParentUserId(request);
+    const parentUserId = await getParentUserId(request);
     const json = (await request.json()) as unknown;
     const payload = validateGenerateQuestionRequest(json);
     const result = await generateNextQuestion({ prisma }, parentUserId, sessionId, payload);

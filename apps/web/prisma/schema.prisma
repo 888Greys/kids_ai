@@ -52,6 +52,7 @@ model AppUser {
   authProvider       String   @default("local") @map("auth_provider")
   authProviderUserId String   @unique @map("auth_provider_user_id")
   role               UserRole @default(PARENT)
+  passwordHash       String?  @map("password_hash")
   fullName           String   @map("full_name")
   email              String   @unique
   timezone           String   @default("Africa/Nairobi")
