@@ -10,6 +10,7 @@ type PrototypeQuestionRequest = {
   targetDifficulty: "easy" | "medium" | "hard" | "adaptive";
   maxHints: number;
   seed?: number;
+  narrativeTheme?: string;
 };
 
 type PrototypeTopic = {
@@ -79,6 +80,7 @@ function validatePayload(payload: unknown): PrototypeQuestionRequest {
   const missionKey = asTrimmedString(payload.missionKey);
   const targetDifficulty = asTrimmedString(payload.targetDifficulty);
   const maxHints = asInteger(payload.maxHints);
+  const narrativeTheme = asTrimmedString(payload.narrativeTheme);
   const seedRaw = payload.seed;
   const seed = seedRaw === undefined ? undefined : asInteger(seedRaw);
 
@@ -118,6 +120,7 @@ function validatePayload(payload: unknown): PrototypeQuestionRequest {
     missionKey: missionKey as MissionKey,
     targetDifficulty: targetDifficulty as PrototypeQuestionRequest["targetDifficulty"],
     maxHints: maxHints!,
+    narrativeTheme: narrativeTheme ?? undefined,
     seed: seed ?? undefined
   };
 }
@@ -137,7 +140,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       subStrand: topic.subStrand,
       targetDifficulty: payload.targetDifficulty,
       maxHints: payload.maxHints,
-      seed
+      seed,
+      narrativeTheme: payload.narrativeTheme
     });
 
     return NextResponse.json(

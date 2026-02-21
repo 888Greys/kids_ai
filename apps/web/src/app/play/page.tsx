@@ -8,6 +8,8 @@ import XPBar from "../components/XPBar";
 import HintRevealer from "../components/HintRevealer";
 import FeedbackSplash from "../components/FeedbackSplash";
 import QuestComplete from "../components/QuestComplete";
+import SpeechSynthesizer from "../components/SpeechSynthesizer";
+import SpeechInput from "../components/SpeechInput";
 import Image from "next/image";
 
 import type {
@@ -43,6 +45,13 @@ import {
 /* ── Tab type ── */
 type Tab = "home" | "quest" | "rewards";
 
+const NARRATIVE_THEMES = [
+  { id: "space", icon: "🚀", label: "Space Explorers" },
+  { id: "jungle", icon: "🦁", label: "Jungle Safari" },
+  { id: "magic", icon: "🧙‍♂️", label: "Wizard School" },
+  { id: "ocean", icon: "🌊", label: "Deep Sea" },
+];
+
 /* ── Page Component ── */
 export default function HomePage() {
   const [tab, setTab] = useState<Tab>("home");
@@ -51,6 +60,7 @@ export default function HomePage() {
     buildPrototypeDashboard(PROTOTYPE_CHILD.childId, PROTOTYPE_CHILD.firstName, PROTOTYPE_CHILD.gradeLevel)
   );
   const [selectedMissionKey, setSelectedMissionKey] = useState<MathMission["key"]>(MATH_MISSIONS[0].key);
+  const [selectedTheme, setSelectedTheme] = useState<string>(NARRATIVE_THEMES[0].id);
   const [questMessage, setQuestMessage] = useState<string | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [activeQuestion, setActiveQuestion] = useState<GenerateQuestionResponse | null>(null);
@@ -175,10 +185,17 @@ export default function HomePage() {
 
   async function generateQuestionForSession(sessionId: string, targetDifficulty: GenerateQuestionResponse["difficulty"]): Promise<void> {
     try {
+      const activeThemeLabel = NARRATIVE_THEMES.find(t => t.id === selectedTheme)?.label;
       const apiQuestion = await apiPost<PrototypeQuestionApiResponse>(
         "/api/v1/prototype/question",
         parentUserId.trim(),
-        { missionKey: selectedMission.key, targetDifficulty, maxHints: 3, seed: answeredCount + 1 }
+        {
+          missionKey: selectedMission.key,
+          targetDifficulty,
+          maxHints: 3,
+          seed: answeredCount + 1,
+          narrativeTheme: activeThemeLabel
+        }
       );
 
       const picked: PrototypeQuestion = {
@@ -443,6 +460,37 @@ export default function HomePage() {
                 </div>
               </section>
 
+              {/* Theme selector */}
+              <section className="themes-section" style={{ marginBottom: "2rem" }}>
+                <h2 className="section-label">✨ Choose Your Theme</h2>
+                <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", paddingBottom: "0.5rem" }}>
+                  {NARRATIVE_THEMES.map((theme) => {
+                    const isSelected = selectedTheme === theme.id;
+                    return (
+                      <button
+                        key={theme.id}
+                        onClick={() => setSelectedTheme(theme.id)}
+                        type="button"
+                        style={{
+                          flex: "0 0 auto",
+                          padding: "0.5rem 1rem",
+                          borderRadius: "1rem",
+                          border: isSelected ? "2px solid var(--purple)" : "2px solid rgba(0,0,0,0.05)",
+                          background: isSelected ? "var(--purple-soft)" : "white",
+                          color: isSelected ? "var(--purple)" : "var(--text-main)",
+                          fontWeight: isSelected ? 600 : 500,
+                          cursor: "pointer",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        <span style={{ marginRight: "0.5rem" }}>{theme.icon}</span>
+                        {theme.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
               {/* Mission selector */}
               <section className="missions-section">
                 <h2 className="section-label">🗺️ Choose Your Mission</h2>
@@ -584,7 +632,10 @@ export default function HomePage() {
                         </span>
 
                         {/* Question text */}
-                        <h3 className="question-text">{activeQuestion.questionText}</h3>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", marginBottom: "1.5rem" }}>
+                          <h3 className="question-text" style={{ margin: 0, flex: 1 }}>{activeQuestion.questionText}</h3>
+                          <SpeechSynthesizer text={activeQuestion.questionText} />
+                        </div>
 
                         {/* Options */}
                         {activeQuestion.options?.length ? (
@@ -605,15 +656,22 @@ export default function HomePage() {
                             ))}
                           </div>
                         ) : (
-                          <label className="answer-field">
-                            <input
-                              value={selectedAnswer}
-                              onChange={(e) => setSelectedAnswer(e.target.value)}
+                          <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%", maxWidth: "400px", margin: "0 auto 1rem auto" }}>
+                            <label className="answer-field" style={{ flex: 1, margin: 0 }}>
+                              <input
+                                value={selectedAnswer}
+                                onChange={(e) => setSelectedAnswer(e.target.value)}
+                                disabled={Boolean(latestAttempt) || isSubmittingAnswer || isResultRevealPending || isAdvancingQuestion}
+                                className="control-input"
+                                placeholder="Type your answer..."
+                                style={{ width: "100%", padding: "12px", borderRadius: "12px", border: "2px solid rgba(0,0,0,0.1)", fontSize: "1.1rem" }}
+                              />
+                            </label>
+                            <SpeechInput
+                              onResult={(t) => setSelectedAnswer(t)}
                               disabled={Boolean(latestAttempt) || isSubmittingAnswer || isResultRevealPending || isAdvancingQuestion}
-                              className="control-input"
-                              placeholder="Type your answer..."
                             />
-                          </label>
+                          </div>
                         )}
 
                         {/* Action buttons */}
@@ -851,7 +909,7 @@ export default function HomePage() {
             <span className="nav-label">Parent</span>
           </a>
         </nav>
-      </main>
-    </MotionConfig>
+      </main >
+    </MotionConfig >
   );
 }

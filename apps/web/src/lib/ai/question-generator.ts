@@ -11,6 +11,7 @@ export type QuestionGenerationContext = {
   targetDifficulty: "easy" | "medium" | "hard" | "adaptive";
   maxHints: number;
   seed: number;
+  narrativeTheme?: string;
 };
 
 export type QuestionDraft = {
@@ -108,8 +109,9 @@ function deterministicDraft(context: QuestionGenerationContext): QuestionDraft {
     `The answer should be just above ${left + right - 2}.`
   ].slice(0, context.maxHints);
 
+  const themeStr = context.narrativeTheme ? ` (Theme: ${context.narrativeTheme})` : "";
   return {
-    questionText: `[${context.topicCode}] What is ${left} + ${right}?`,
+    questionText: `[${context.topicCode}] What is ${left} + ${right}?${themeStr}`,
     answerFormat: "multiple_choice",
     options,
     correctAnswer: { value: String(answer) },
@@ -201,8 +203,8 @@ function parseDraftFromJsonText(context: QuestionGenerationContext, rawText: str
   const correctAnswerRaw = obj.correctAnswer;
   const correctValue =
     typeof correctAnswerRaw === "object" &&
-    correctAnswerRaw !== null &&
-    typeof (correctAnswerRaw as Record<string, unknown>).value === "string"
+      correctAnswerRaw !== null &&
+      typeof (correctAnswerRaw as Record<string, unknown>).value === "string"
       ? ((correctAnswerRaw as Record<string, unknown>).value as string).trim()
       : "";
   const hints = Array.isArray(obj.hintLadder) ? obj.hintLadder.filter((v): v is string => typeof v === "string") : [];
@@ -252,6 +254,10 @@ async function callOpenAIOnce(context: QuestionGenerationContext, attempt: numbe
 
   const systemPrompt =
     "You generate Grade 4 math questions aligned to the provided topic. Return only valid JSON matching the schema.";
+  const themeInstruction = context.narrativeTheme
+    ? `\n- Write the question as a highly engaging story involving: "${context.narrativeTheme}". The math problem must be a natural part of the narrative.`
+    : "";
+
   const userPrompt = `Create one question for Grade ${context.gradeLevel}.
 Topic code: ${context.topicCode}
 Topic title: ${context.topicTitle}
@@ -261,7 +267,7 @@ Difficulty: ${context.targetDifficulty}
 Hint count: ${context.maxHints}
 Requirements:
 - Include the topic code in questionText as [${context.topicCode}] prefix.
-- Age-appropriate for Grade 4.
+- Age-appropriate for Grade 4.${themeInstruction}
 - If answerFormat is multiple_choice, provide 3-4 options.
 - correctAnswer.value must match one valid answer.
 - hintLadder must have exactly ${context.maxHints} progressive hints.`;
@@ -395,6 +401,10 @@ async function callCerebrasOnce(context: QuestionGenerationContext, attempt: num
 
   const systemPrompt =
     "You generate Grade 4 math questions aligned to the provided topic. Return only valid JSON matching the schema.";
+  const themeInstruction = context.narrativeTheme
+    ? `\n- Write the question as a highly engaging story involving: "${context.narrativeTheme}". The math problem must be a natural part of the narrative.`
+    : "";
+
   const userPrompt = `Create one question for Grade ${context.gradeLevel}.
 Topic code: ${context.topicCode}
 Topic title: ${context.topicTitle}
@@ -404,7 +414,7 @@ Difficulty: ${context.targetDifficulty}
 Hint count: ${context.maxHints}
 Requirements:
 - Include the topic code in questionText as [${context.topicCode}] prefix.
-- Age-appropriate for Grade 4.
+- Age-appropriate for Grade 4.${themeInstruction}
 - If answerFormat is multiple_choice, provide 3-4 options.
 - correctAnswer.value must match one valid answer.
 - hintLadder must have exactly ${context.maxHints} progressive hints.`;
