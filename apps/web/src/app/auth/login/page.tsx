@@ -4,6 +4,8 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "framer-motion";
+import FloatingDecor from "../../components/FloatingDecor";
 
 function LoginForm() {
     const router = useRouter();
@@ -42,8 +44,14 @@ function LoginForm() {
     }
 
     return (
-        <main className="auth-page">
-            <div className="auth-card">
+        <main className="auth-page relative overflow-hidden">
+            <FloatingDecor />
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="auth-card relative z-10"
+            >
                 <div className="auth-header">
                     <Image src="/milo.png" alt="Milo" width={64} height={64} priority />
                     <h1>Welcome Back!</h1>
@@ -94,7 +102,7 @@ function LoginForm() {
                         Sign up
                     </Link>
                 </p>
-            </div>
+            </motion.div>
         </main>
     );
 }

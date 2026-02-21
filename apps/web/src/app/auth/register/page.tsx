@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "framer-motion";
+import FloatingDecor from "../../components/FloatingDecor";
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -51,8 +53,14 @@ export default function RegisterPage() {
     }
 
     return (
-        <main className="auth-page">
-            <div className="auth-card">
+        <main className="auth-page relative overflow-hidden">
+            <FloatingDecor />
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="auth-card relative z-10"
+            >
                 <div className="auth-header">
                     <Image src="/milo.png" alt="Milo" width={64} height={64} priority />
                     <h1>Create Your Account</h1>
@@ -131,7 +139,7 @@ export default function RegisterPage() {
                         Log in
                     </Link>
                 </p>
-            </div>
+            </motion.div>
         </main>
     );
 }

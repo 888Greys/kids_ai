@@ -76,12 +76,28 @@ body {
   font-family: var(--font-body), "Segoe UI", sans-serif;
   color: var(--navy);
   background:
-    radial-gradient(circle at 10% 8%, rgba(124, 58, 237, 0.08) 0, transparent 35%),
-    radial-gradient(circle at 90% 15%, rgba(56, 189, 248, 0.1) 0, transparent 40%),
-    radial-gradient(circle at 80% 80%, rgba(20, 184, 166, 0.07) 0, transparent 30%),
-    radial-gradient(circle at 20% 90%, rgba(250, 204, 21, 0.08) 0, transparent 35%),
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.08), transparent 40%),
+    radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.1), transparent 40%),
+    radial-gradient(circle at bottom left, rgba(20, 184, 166, 0.07), transparent 30%),
+    radial-gradient(circle at top right, rgba(250, 204, 21, 0.08), transparent 35%),
     linear-gradient(170deg, #faf5ff 0%, #fefce8 50%, #ecfdf5 100%);
   background-attachment: fixed;
+  background-size: 200% 200%;
+  animation: bgMesh 15s ease infinite;
+}
+
+@keyframes bgMesh {
+  0% {
+    background-position: 0% 0%;
+  }
+
+  50% {
+    background-position: 100% 100%;
+  }
+
+  100% {
+    background-position: 0% 0%;
+  }
 }
 
 h1,
