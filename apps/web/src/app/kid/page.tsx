@@ -1,7 +1,5 @@
-"use client";
-
-import HomePage from "../page";
+import { redirect } from "next/navigation";
 
 export default function KidModePage() {
-  return <HomePage />;
+  redirect("/");
 }

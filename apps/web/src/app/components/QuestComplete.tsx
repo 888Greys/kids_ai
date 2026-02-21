@@ -1,69 +1,71 @@
 ﻿"use client";
 
 import { motion } from "framer-motion";
-
-interface QuestCompleteProps {
-    totalQuestions: number;
-    correctAnswers: number;
-    avgHintsUsed: number;
-    onPlayAgain?: () => void;
-}
-
-function starCount(correct: number, total: number): number {
-    const ratio = total > 0 ? correct / total : 0;
-    if (ratio >= 0.9) return 3;
-    if (ratio >= 0.6) return 2;
-    return 1;
-}
+import MascotBuddy from "./MascotBuddy";
 
 export default function QuestComplete({
     totalQuestions,
     correctAnswers,
     avgHintsUsed,
     onPlayAgain,
-}: QuestCompleteProps) {
-    const stars = starCount(correctAnswers, totalQuestions);
+}: {
+    totalQuestions: number;
+    correctAnswers: number;
+    avgHintsUsed: number;
+    onPlayAgain: () => void;
+}) {
+    const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+    const stars = accuracy >= 90 ? 3 : accuracy >= 60 ? 2 : 1;
 
     return (
         <motion.div
-            className="quest-summary"
-            initial={{ opacity: 0, scale: 0.86, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: "easeOut" }}
+            className="quest-complete"
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, type: "spring", bounce: 0.3 }}
         >
-            <span className="quest-summary-emoji">🏆</span>
-            <h3>Quest Complete!</h3>
+            <MascotBuddy mood="celebrating" size={100} showSpeech />
 
-            <div className="quest-stars">
-                {[1, 2, 3].map((n) => (
+            <h2 className="quest-complete-title">Quest Complete! 🏆</h2>
+
+            <div className="quest-complete-stars">
+                {Array.from({ length: 3 }).map((_, i) => (
                     <motion.span
-                        key={n}
-                        initial={{ opacity: 0, scale: 0, rotate: -90 }}
-                        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                        transition={{ delay: 0.24 + n * 0.16, duration: 0.36, type: "spring" }}
-                        style={{ filter: n <= stars ? "none" : "grayscale(1) opacity(0.3)" }}
+                        key={i}
+                        className={`quest-star ${i < stars ? "quest-star-earned" : "quest-star-empty"}`}
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ delay: 0.3 + i * 0.15, duration: 0.4, type: "spring" }}
                     >
-                        ⭐
+                        {i < stars ? "⭐" : "☆"}
                     </motion.span>
                 ))}
             </div>
 
-            <p>
-                <strong>{correctAnswers}/{totalQuestions}</strong> correct • avg hints <strong>{avgHintsUsed.toFixed(1)}</strong>
-            </p>
-            <p className="quest-summary-note">Great work today. Keep your streak alive.</p>
+            <div className="quest-complete-stats">
+                <div className="quest-complete-stat">
+                    <span className="quest-complete-num">{correctAnswers}/{totalQuestions}</span>
+                    <span className="quest-complete-label">Correct</span>
+                </div>
+                <div className="quest-complete-stat">
+                    <span className="quest-complete-num">{accuracy}%</span>
+                    <span className="quest-complete-label">Accuracy</span>
+                </div>
+                <div className="quest-complete-stat">
+                    <span className="quest-complete-num">{avgHintsUsed.toFixed(1)}</span>
+                    <span className="quest-complete-label">Avg Hints</span>
+                </div>
+            </div>
 
-            {onPlayAgain ? (
-                <motion.button
-                    className="btn btn-quest"
-                    onClick={onPlayAgain}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    style={{ marginTop: 8 }}
-                >
-                    Play Another Quest
-                </motion.button>
-            ) : null}
+            <motion.button
+                className="btn btn-quest"
+                onClick={onPlayAgain}
+                type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+            >
+                🚀 Play Again!
+            </motion.button>
         </motion.div>
     );
 }

@@ -7,26 +7,31 @@ export default function XPBar({
     label,
 }: {
     percent: number;
-    label: string;
+    label?: string;
 }) {
-    const safePercent = Math.min(100, Math.max(0, percent));
+    const stars = [20, 40, 60, 80, 100];
 
     return (
-        <div className="xp-shell">
-            <div className="xp-head">
-                <span className="arena-kicker">{label}</span>
-                <span className="arena-counter">{safePercent}%</span>
-            </div>
+        <div className="xp-bar-wrapper">
+            {label && <span className="xp-bar-label">{label}</span>}
             <div className="xp-track">
                 <motion.div
                     className="xp-fill"
                     initial={{ width: 0 }}
-                    animate={{ width: `${safePercent}%` }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                >
-                    <span className="xp-spark" />
-                </motion.div>
+                    animate={{ width: `${Math.min(100, percent)}%` }}
+                    transition={{ duration: 0.8, type: "spring", bounce: 0.3 }}
+                />
+                {stars.map((pos) => (
+                    <div
+                        key={pos}
+                        className={`xp-star ${percent >= pos ? "xp-star-earned" : ""}`}
+                        style={{ left: `${pos}%` }}
+                    >
+                        ⭐
+                    </div>
+                ))}
             </div>
+            <span className="xp-bar-percent">{percent}%</span>
         </div>
     );
 }
